@@ -12,8 +12,22 @@ class SubtitleProcessor:
     def __init__(self, directory_path=None):
         self.word_occurrences = defaultdict(list)
         self.word_counts = defaultdict(int)
+        self.exceptions = self.load_exceptions()
         if directory_path:
             self.process_directory(directory_path)
+    
+    def load_exceptions(self):
+        try:
+            exceptions_file = Path('exceptions.txt')
+            if exceptions_file.exists():
+                with open(exceptions_file, 'r', encoding='utf-8') as f:
+                    return {word.strip().lower() for word in f if word.strip()}
+            logger.info("Arquivo exceptions.txt não encontrado. Criando arquivo vazio.")
+            exceptions_file.touch()
+            return set()
+        except Exception as e:
+            logger.error(f"Erro ao carregar exceções: {str(e)}")
+            return set()
         
     def process_subtitle_file(self, file_path):
         try:
@@ -31,10 +45,11 @@ class SubtitleProcessor:
                 i += 1
                     
             for line in text_lines:
-                words = re.findall(r'\b[a-zA-Z]+\b', line.lower())
+                # Modificado o regex para incluir apóstrofes
+                words = re.findall(r"\b[a-zA-Z]+(?:'[a-zA-Z]+)?(?=\s|$)", line.lower())
                 
                 for word in words:
-                    if len(word) > 1:  # Ignora palavras de uma letra
+                    if len(word) > 1 and word not in self.exceptions:
                         self.word_counts[word] += 1
                         self.word_occurrences[word].append({
                             'line': line.strip(),
@@ -64,11 +79,14 @@ class SubtitleProcessor:
     
     def get_word_occurrences(self, word):
         return self.word_occurrences[word.lower()]
+    
+    def get_stats(self):
+        return {
+            'total_words': len(self.word_counts),
+            'total_occurrences': sum(self.word_counts.values())
+        }
 
-# Criação do app Flask
 app = Flask(__name__)
-
-# Instância global do processador (será inicializada mais tarde)
 subtitle_processor = None
 
 HTML_TEMPLATE = '''
@@ -120,11 +138,11 @@ HTML_TEMPLATE = '''
             border: none;
             border-radius: 3px;
         }
-        button:first-child {
+        button.show-phrases {
             background-color: #4CAF50;
             color: white;
         }
-        button:last-child {
+        button.remove {
             background-color: #f44336;
             color: white;
         }
@@ -136,7 +154,16 @@ HTML_TEMPLATE = '''
         }
     </style>
     <script>
-        function toggleOccurrences(word) {
+        function updateStats() {
+            fetch('/get_stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-words').textContent = data.total_words;
+                    document.getElementById('total-occurrences').textContent = data.total_occurrences;
+                });
+        }
+
+        function toggleOccurrences(word, button) {
             const occurrencesDiv = document.getElementById('occurrences-' + word);
             if (occurrencesDiv.style.display === 'none') {
                 fetch('/get_occurrences/' + word)
@@ -151,9 +178,11 @@ HTML_TEMPLATE = '''
                         });
                         occurrencesDiv.innerHTML = html;
                         occurrencesDiv.style.display = 'block';
+                        button.textContent = 'Hide Phrases';
                     });
             } else {
                 occurrencesDiv.style.display = 'none';
+                button.textContent = 'Show Phrases';
             }
         }
         
@@ -164,6 +193,7 @@ HTML_TEMPLATE = '''
                     const occurrencesRow = row.nextElementSibling;
                     row.remove();
                     occurrencesRow.remove();
+                    updateStats();
                 });
         }
     </script>
@@ -172,7 +202,8 @@ HTML_TEMPLATE = '''
     <h1>English Learning from Subtitles</h1>
     <div class="stats">
         <h3>Statistics:</h3>
-        <p>Total unique words: {{ total_words }}</p>
+        <p>Total unique words: <span id="total-words">{{ stats.total_words }}</span></p>
+        <p>Total word occurrences: <span id="total-occurrences">{{ stats.total_occurrences }}</span></p>
     </div>
     <table>
         <tr>
@@ -185,8 +216,8 @@ HTML_TEMPLATE = '''
             <td>{{ word }}</td>
             <td>{{ count }}</td>
             <td>
-                <button onclick="toggleOccurrences('{{ word }}')">Show Phrases</button>
-                <button onclick="removeWord('{{ word }}')">Remove</button>
+                <button class="show-phrases" onclick="toggleOccurrences('{{ word }}', this)">Show Phrases</button>
+                <button class="remove" onclick="removeWord('{{ word }}')">Remove</button>
             </td>
         </tr>
         <tr>
@@ -206,8 +237,12 @@ def index():
     if subtitle_processor is None:
         return "Erro: Nenhum diretório processado"
     words = subtitle_processor.get_sorted_words()
-    total_words = len(words)
-    return render_template_string(HTML_TEMPLATE, words=words, total_words=total_words)
+    stats = subtitle_processor.get_stats()
+    return render_template_string(HTML_TEMPLATE, words=words, stats=stats)
+
+@app.route('/get_stats')
+def get_stats():
+    return jsonify(subtitle_processor.get_stats())
 
 @app.route('/get_occurrences/<word>')
 def get_occurrences(word):
@@ -218,7 +253,7 @@ def remove_word(word):
     if word in subtitle_processor.word_counts:
         del subtitle_processor.word_counts[word]
         del subtitle_processor.word_occurrences[word]
-    return jsonify({'status': 'success'})
+    return jsonify(subtitle_processor.get_stats())
 
 def validate_directory(directory_path):
     path = Path(directory_path)
@@ -233,18 +268,27 @@ def validate_directory(directory_path):
     return True
 
 if __name__ == '__main__':
+    print("\nVerificando arquivo de exceções...")
+    exceptions_file = Path('exceptions.txt')
+    if not exceptions_file.exists():
+        print("Arquivo exceptions.txt não encontrado. Criando arquivo vazio.")
+        exceptions_file.touch()
+    else:
+        print("Arquivo exceptions.txt encontrado.")
+    
     while True:
         directory = input("\nDigite o caminho do diretório com os arquivos .srt: ").strip()
         
         if validate_directory(directory):
             print(f"\nProcessando arquivos do diretório: {directory}")
             
-            # Inicializa o processador com o diretório
             subtitle_processor = SubtitleProcessor(directory)
             
             if len(subtitle_processor.word_counts) > 0:
                 print("\nProcessamento concluído com sucesso!")
-                print(f"Total de palavras únicas encontradas: {len(subtitle_processor.word_counts)}")
+                stats = subtitle_processor.get_stats()
+                print(f"Total de palavras únicas encontradas: {stats['total_words']}")
+                print(f"Total de ocorrências: {stats['total_occurrences']}")
                 print("\nIniciando servidor web...")
                 print("Acesse http://localhost:5000 no seu navegador")
                 app.run(debug=False, host='0.0.0.0')
