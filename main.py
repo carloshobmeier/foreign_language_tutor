@@ -1,8 +1,10 @@
+# main.py
 from pathlib import Path
 import re
 from collections import defaultdict
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template, request, jsonify
 import logging
+from urllib.parse import unquote
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -18,13 +20,12 @@ class SubtitleProcessor:
     
     def load_exceptions(self):
         try:
-            # Garante que o arquivo exceptions.txt será buscado no mesmo diretório do script
             exceptions_file = Path(__file__).parent / 'exceptions.txt'
             if exceptions_file.exists():
                 with open(exceptions_file, 'r', encoding='utf-8') as f:
                     return {word.strip().lower() for word in f if word.strip()}
             logger.info("Arquivo exceptions.txt não encontrado. Criando arquivo vazio.")
-            exceptions_file.touch()  # Cria o arquivo vazio se ele não existir
+            exceptions_file.touch()
             return set()
         except Exception as e:
             logger.error(f"Erro ao carregar exceções: {str(e)}")
@@ -46,7 +47,6 @@ class SubtitleProcessor:
                 i += 1
                     
             for line in text_lines:
-                # Modificado o regex para incluir apóstrofes
                 words = re.findall(r"\b[a-zA-Z]+(?:'[a-zA-Z]+)?(?=\s|$)", line.lower())
                 
                 for word in words:
@@ -90,182 +90,6 @@ class SubtitleProcessor:
 app = Flask(__name__)
 subtitle_processor = None
 
-HTML_TEMPLATE = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>English Learning from Subtitles</title>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f2f2f2;
-        }
-
-        th:nth-child(2), td:nth-child(2) {
-            width: 100px;
-            text-align: center;
-        }
-
-        th:nth-child(1), td:nth-child(1) {
-            width: 200px;
-            text-align: left;
-        }
-
-        .occurrences {
-            display: none;
-            margin-top: 10px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-        }
-
-        .occurrence-item {
-            margin-bottom: 10px;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            line-height: 1.4;
-        }
-
-        button {
-            padding: 5px 10px;
-            margin: 0 5px;
-            cursor: pointer;
-            border: none;
-            border-radius: 3px;
-        }
-
-        button.show-phrases {
-            background-color: #4CAF50;
-            color: white;
-        }
-
-        button.remove {
-            background-color: #f44336;
-            color: white;
-        }
-
-        .stats {
-            margin-bottom: 20px;
-            padding: 10px;
-            background-color: #e7f3ff;
-            border-radius: 5px;
-        }
-
-        span {
-            color: blue;
-        }
-
-    </style>
-
-
-    <script>
-
-        function updateStats() {
-            fetch('/get_stats')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('total-words').textContent = data.total_words;
-                    document.getElementById('total-occurrences').textContent = data.total_occurrences;
-                });
-        }
-
-        function toggleOccurrences(word, button) {
-            const decodedWord = word.replace(/&#39;/g, "'"); // Substitui &#39; de volta para '
-            const occurrencesDiv = document.getElementById('occurrences-' + word);
-            if (occurrencesDiv.style.display === 'none') {
-                fetch('/get_occurrences/' + encodeURIComponent(decodedWord))
-                    .then(response => response.json())
-                    .then(data => {
-                        let html = '';
-                        data.forEach(occurrence => {
-                            html += `<div class="occurrence-item">
-                                <strong>File:</strong> <span>${occurrence.file} </span><br>
-                                <strong>Line:</strong> ${occurrence.line}
-                            </div>`;
-                        });
-                        occurrencesDiv.innerHTML = html;
-                        occurrencesDiv.style.display = 'block';
-                        button.textContent = 'Hide Phrases';
-                    });
-            } else {
-                occurrencesDiv.style.display = 'none';
-                button.textContent = 'Show Phrases';
-            }
-        }
-
-        function removeWord(word) {
-            const encodedWord = word.replace(/'/g, "&#39;");
-            fetch('/remove_word/' + encodeURIComponent(word), { method: 'POST' })
-                .then(() => {
-                    const row = document.getElementById('row-' + encodedWord);
-                    const occurrencesRow = row.nextElementSibling;
-                    row.remove();
-                    occurrencesRow.remove();
-                    updateStats();
-                });
-        }
-    </script>
-
-</head>
-
-<body>
-    <h1>English Learning from Subtitles</h1>
-    <div class="stats">
-        <h3>Statistics:</h3>
-            <p>Total unique words: <span id="total-words">{{ stats.total_words | format }}</span></p>
-            <p>Total word occurrences: <span id="total-occurrences">{{ stats.total_occurrences | format }}</span></p>
-    </div>
-    <table>
-        <tr>
-            <th>Word</th>
-            <th>Occurrences</th>
-            <th>Actions</th>
-        </tr>
-        {% for word, count in words %}
-        <tr id="row-{{ word | replace(\"'\", \"&#39;\") }}">
-            <td>{{ word }}</td>
-            <td>{{ count }}</td>
-            <td>
-                <button class="show-phrases" onclick="toggleOccurrences('{{ word | replace(\"'\", \"&#39;\") }}', this)">Show Phrases</button>
-                <button class="remove" onclick="removeWord('{{ word | replace(\"'\", \"&#39;\") }}')">Remove</button>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="3">
-                <div id="occurrences-{{ word | replace(\"'\", \"&#39;\") }}" class="occurrences" style="display: none;">
-                </div>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-</body>
-</html>
-'''
-
 @app.route('/')
 def index():
     if subtitle_processor is None:
@@ -273,14 +97,12 @@ def index():
     words = subtitle_processor.get_sorted_words()
     stats = subtitle_processor.get_stats()
     
-    # Formatar números com ponto como separador de milhar
     formatted_stats = {
         'total_words': "{:,}".format(stats['total_words']).replace(",", "."),
         'total_occurrences': "{:,}".format(stats['total_occurrences']).replace(",", ".")
     }
     
-    return render_template_string(HTML_TEMPLATE, words=words, stats=formatted_stats)
-
+    return render_template('index.html', words=words, stats=formatted_stats)
 
 @app.route('/get_stats')
 def get_stats():
@@ -291,29 +113,25 @@ def get_stats():
     }
     return jsonify(formatted_stats)
 
-
 @app.route('/get_occurrences/<word>')
 def get_occurrences(word):
-    return jsonify(subtitle_processor.get_word_occurrences(word))
+    decoded_word = unquote(word)
+    return jsonify(subtitle_processor.get_word_occurrences(decoded_word))
 
 @app.route('/remove_word/<word>', methods=['POST'])
 def remove_word(word):
-    # Decodificar a palavra para substituir &#39; por '
-    decoded_word = word.replace("&#39;", "'")
+    decoded_word = unquote(word)
     
     exceptions_file = Path(__file__).parent / 'exceptions.txt'
     
-    # Adicionar a palavra decodificada ao arquivo exceptions.txt
     with open(exceptions_file, 'a', encoding='utf-8') as f:
         f.write(decoded_word.lower() + '\n')
     
-    # Remover a palavra das contagens usando a forma original
     if decoded_word in subtitle_processor.word_counts:
         del subtitle_processor.word_counts[decoded_word]
         del subtitle_processor.word_occurrences[decoded_word]
     
     return jsonify(subtitle_processor.get_stats())
-
 
 def validate_directory(directory_path):
     path = Path(directory_path)

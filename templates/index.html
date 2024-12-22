@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>English Learning from Subtitles</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+
+        th:nth-child(2), td:nth-child(2) {
+            width: 100px;
+            text-align: center;
+        }
+
+        th:nth-child(1), td:nth-child(1) {
+            width: 200px;
+            text-align: left;
+        }
+
+        .occurrences {
+            display: none;
+            margin-top: 10px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .occurrence-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            line-height: 1.4;
+        }
+
+        button {
+            padding: 5px 10px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 3px;
+        }
+
+        button.show-phrases {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button.remove {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .stats {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #e7f3ff;
+            border-radius: 5px;
+        }
+
+        span {
+            color: blue;
+        }
+    </style>
+
+    <script>
+        function updateStats() {
+            fetch('/get_stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total-words').textContent = data.total_words;
+                    document.getElementById('total-occurrences').textContent = data.total_occurrences;
+                });
+        }
+
+        function toggleOccurrences(word, button) {
+            const decodedWord = decodeURIComponent(word);
+            const occurrencesDiv = document.getElementById('occurrences-' + word);
+            if (occurrencesDiv.style.display === 'none') {
+                fetch('/get_occurrences/' + word)
+                    .then(response => response.json())
+                    .then(data => {
+                        let html = '';
+                        data.forEach(occurrence => {
+                            html += `<div class="occurrence-item">
+                                <strong>File:</strong> <span>${occurrence.file} </span><br>
+                                <strong>Line:</strong> ${occurrence.line}
+                            </div>`;
+                        });
+                        occurrencesDiv.innerHTML = html;
+                        occurrencesDiv.style.display = 'block';
+                        button.textContent = 'Hide Phrases';
+                    });
+            } else {
+                occurrencesDiv.style.display = 'none';
+                button.textContent = 'Show Phrases';
+            }
+        }
+
+        function removeWord(word) {
+            fetch('/remove_word/' + word, { method: 'POST' })
+                .then(() => {
+                    const row = document.getElementById('row-' + word);
+                    const occurrencesRow = row.nextElementSibling;
+                    row.remove();
+                    occurrencesRow.remove();
+                    updateStats();
+                });
+        }
+    </script>
+</head>
+<body>
+    <h1>English Learning from Subtitles</h1>
+    <div class="stats">
+        <h3>Statistics:</h3>
+            <p>Total unique words: <span id="total-words">{{ stats.total_words }}</span></p>
+            <p>Total word occurrences: <span id="total-occurrences">{{ stats.total_occurrences }}</span></p>
+    </div>
+    <table>
+        <tr>
+            <th>Word</th>
+            <th>Occurrences</th>
+            <th>Actions</th>
+        </tr>
+        {% for word, count in words %}
+        <tr id="row-{{ word | urlencode }}">
+            <td>{{ word }}</td>
+            <td>{{ count }}</td>
+            <td>
+                <button class="show-phrases" onclick='toggleOccurrences("{{ word | urlencode }}", this)'>Show Phrases</button>
+                <button class="remove" onclick='removeWord("{{ word | urlencode }}")'>Remove</button>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <div id="occurrences-{{ word | urlencode }}" class="occurrences" style="display: none;">
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
