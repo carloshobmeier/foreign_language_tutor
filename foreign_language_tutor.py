@@ -242,7 +242,6 @@ function removeWord(word) {
 '''
 
 @app.route('/')
-@app.route('/')
 def index():
     if subtitle_processor is None:
         return "Erro: Nenhum diretório processado"
@@ -275,10 +274,23 @@ def get_occurrences(word):
 
 @app.route('/remove_word/<word>', methods=['POST'])
 def remove_word(word):
-    if word in subtitle_processor.word_counts:
-        del subtitle_processor.word_counts[word]
-        del subtitle_processor.word_occurrences[word]
+    # Decodificar a palavra para substituir &#39; por '
+    decoded_word = word.replace("&#39;", "'")
+    
+    exceptions_file = Path(__file__).parent / 'exceptions.txt'
+    
+    # Adicionar a palavra decodificada ao arquivo exceptions.txt
+    with open(exceptions_file, 'a', encoding='utf-8') as f:
+        f.write(decoded_word.lower() + '\n')
+    
+    # Remover a palavra das contagens usando a forma original
+    if decoded_word in subtitle_processor.word_counts:
+        del subtitle_processor.word_counts[decoded_word]
+        del subtitle_processor.word_occurrences[decoded_word]
+    
     return jsonify(subtitle_processor.get_stats())
+
+
 
 def validate_directory(directory_path):
     path = Path(directory_path)
