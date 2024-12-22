@@ -96,26 +96,31 @@ HTML_TEMPLATE = '''
 <head>
     <meta charset="UTF-8">
     <title>English Learning from Subtitles</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
             padding: 20px;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
+
         th, td {
             padding: 12px;
             text-align: left;
             border: 1px solid #ddd;
         }
+
         th {
             background-color: #4CAF50;
             color: white;
         }
+
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
@@ -137,12 +142,14 @@ HTML_TEMPLATE = '''
             background-color: #f9f9f9;
             border-radius: 5px;
         }
+
         .occurrence-item {
             margin-bottom: 10px;
             padding: 10px;
             border-bottom: 1px solid #eee;
             line-height: 1.4;
         }
+
         button {
             padding: 5px 10px;
             margin: 0 5px;
@@ -150,14 +157,17 @@ HTML_TEMPLATE = '''
             border: none;
             border-radius: 3px;
         }
+
         button.show-phrases {
             background-color: #4CAF50;
             color: white;
         }
+
         button.remove {
             background-color: #f44336;
             color: white;
         }
+
         .stats {
             margin-bottom: 20px;
             padding: 10px;
@@ -168,8 +178,12 @@ HTML_TEMPLATE = '''
         span {
             color: blue;
         }
+
     </style>
+
+
     <script>
+
         function updateStats() {
             fetch('/get_stats')
                 .then(response => response.json())
@@ -179,45 +193,45 @@ HTML_TEMPLATE = '''
                 });
         }
 
-function toggleOccurrences(word, button) {
-    const decodedWord = word.replace(/&#39;/g, "'"); // Substitui &#39; de volta para '
-    const occurrencesDiv = document.getElementById('occurrences-' + word);
-    if (occurrencesDiv.style.display === 'none') {
-        fetch('/get_occurrences/' + encodeURIComponent(decodedWord))
-            .then(response => response.json())
-            .then(data => {
-                let html = '';
-                data.forEach(occurrence => {
-                    html += `<div class="occurrence-item">
-                        <strong>File:</strong> <span>${occurrence.file} </span><br>
-                        <strong>Line:</strong> ${occurrence.line}
-                    </div>`;
+        function toggleOccurrences(word, button) {
+            const decodedWord = word.replace(/&#39;/g, "'"); // Substitui &#39; de volta para '
+            const occurrencesDiv = document.getElementById('occurrences-' + word);
+            if (occurrencesDiv.style.display === 'none') {
+                fetch('/get_occurrences/' + encodeURIComponent(decodedWord))
+                    .then(response => response.json())
+                    .then(data => {
+                        let html = '';
+                        data.forEach(occurrence => {
+                            html += `<div class="occurrence-item">
+                                <strong>File:</strong> <span>${occurrence.file} </span><br>
+                                <strong>Line:</strong> ${occurrence.line}
+                            </div>`;
+                        });
+                        occurrencesDiv.innerHTML = html;
+                        occurrencesDiv.style.display = 'block';
+                        button.textContent = 'Hide Phrases';
+                    });
+            } else {
+                occurrencesDiv.style.display = 'none';
+                button.textContent = 'Show Phrases';
+            }
+        }
+
+        function removeWord(word) {
+            const encodedWord = word.replace(/'/g, "&#39;");
+            fetch('/remove_word/' + encodeURIComponent(word), { method: 'POST' })
+                .then(() => {
+                    const row = document.getElementById('row-' + encodedWord);
+                    const occurrencesRow = row.nextElementSibling;
+                    row.remove();
+                    occurrencesRow.remove();
+                    updateStats();
                 });
-                occurrencesDiv.innerHTML = html;
-                occurrencesDiv.style.display = 'block';
-                button.textContent = 'Hide Phrases';
-            });
-    } else {
-        occurrencesDiv.style.display = 'none';
-        button.textContent = 'Show Phrases';
-    }
-}
-
-
-function removeWord(word) {
-    const encodedWord = word.replace(/'/g, "&#39;");
-    fetch('/remove_word/' + encodeURIComponent(word), { method: 'POST' })
-        .then(() => {
-            const row = document.getElementById('row-' + encodedWord);
-            const occurrencesRow = row.nextElementSibling;
-            row.remove();
-            occurrencesRow.remove();
-            updateStats();
-        });
-}
-
+        }
     </script>
+
 </head>
+
 <body>
     <h1>English Learning from Subtitles</h1>
     <div class="stats">
@@ -233,19 +247,19 @@ function removeWord(word) {
         </tr>
         {% for word, count in words %}
         <tr id="row-{{ word | replace(\"'\", \"&#39;\") }}">
-    <td>{{ word }}</td>
-    <td>{{ count }}</td>
-    <td>
-        <button class="show-phrases" onclick="toggleOccurrences('{{ word | replace(\"'\", \"&#39;\") }}', this)">Show Phrases</button>
-        <button class="remove" onclick="removeWord('{{ word | replace(\"'\", \"&#39;\") }}')">Remove</button>
-    </td>
-</tr>
-<tr>
-    <td colspan="3">
-        <div id="occurrences-{{ word | replace(\"'\", \"&#39;\") }}" class="occurrences" style="display: none;">
-        </div>
-    </td>
-</tr>
+            <td>{{ word }}</td>
+            <td>{{ count }}</td>
+            <td>
+                <button class="show-phrases" onclick="toggleOccurrences('{{ word | replace(\"'\", \"&#39;\") }}', this)">Show Phrases</button>
+                <button class="remove" onclick="removeWord('{{ word | replace(\"'\", \"&#39;\") }}')">Remove</button>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <div id="occurrences-{{ word | replace(\"'\", \"&#39;\") }}" class="occurrences" style="display: none;">
+                </div>
+            </td>
+        </tr>
         {% endfor %}
     </table>
 </body>
@@ -266,7 +280,6 @@ def index():
     }
     
     return render_template_string(HTML_TEMPLATE, words=words, stats=formatted_stats)
-
 
 
 @app.route('/get_stats')
@@ -300,7 +313,6 @@ def remove_word(word):
         del subtitle_processor.word_occurrences[decoded_word]
     
     return jsonify(subtitle_processor.get_stats())
-
 
 
 def validate_directory(directory_path):

@@ -1,8 +1,15 @@
 - mudanças:
 
-deve haver mais um botão 'add' que adiciona uma linha a um txt de dicionário
+deve haver mais um botão 'add' que adiciona uma linha a um json de dicionário
+	adiciona também a frase(s) de exemplo
+	adiciona também a data em que a palavra foi 'aprendida'
 deve haver mais um botão 'meaning' que mostra o significado da palavra
 deve haver mais um botão 'translation' que mostra a tradução da palavra
+percentual de palavras revisadas
+bibliotecas text-to-speech para ver a pronúncia das palavras
+gamificação (pontos por palavras adicionadas ao dicionário)
+botão para marcar palavras (assim você consegue ver onde parou, por exemplo)
+
 
 
 novas estatísticas:
@@ -11,6 +18,9 @@ total de palavras únicas encontradas entre as exceções
 total de palavras encontradas entre as exceções
 total de palavras únicas já adicionadas ao dicionário
 total de palavras já adicionadas ao dicionário
+gráfico dia/semana/mês de palavras novas aprendidas
+gráfico metas de palavras adicionadas ao dicionário/exceções (diárias, semanais, mensais)
+
 
 (palavras que já estejam no dicionário devem ser mostradas com um parênteses vermelho alertando 'já definida')
 (acima - botão para hide/show de palavras que já estão no dicionário)
@@ -21,6 +31,9 @@ total de palavras já adicionadas ao dicionário
 Mostrar/esconder palavras adicionadas como exceção (por padrão, esconder0
 
 integrar com api's como a do google translate e oxford dictionary
+
+deixar a linha em que o mouse está sobre em destaque para ficar mais fácil de mexer por muito tempo
+
 
 
 
