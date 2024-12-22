@@ -18,12 +18,13 @@ class SubtitleProcessor:
     
     def load_exceptions(self):
         try:
-            exceptions_file = Path('exceptions.txt')
+            # Garante que o arquivo exceptions.txt será buscado no mesmo diretório do script
+            exceptions_file = Path(__file__).parent / 'exceptions.txt'
             if exceptions_file.exists():
                 with open(exceptions_file, 'r', encoding='utf-8') as f:
                     return {word.strip().lower() for word in f if word.strip()}
             logger.info("Arquivo exceptions.txt não encontrado. Criando arquivo vazio.")
-            exceptions_file.touch()
+            exceptions_file.touch()  # Cria o arquivo vazio se ele não existir
             return set()
         except Exception as e:
             logger.error(f"Erro ao carregar exceções: {str(e)}")
