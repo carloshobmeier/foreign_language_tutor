@@ -1,0 +1,27 @@
+- mudanças:
+
+deve haver mais um botão 'add' que adiciona uma linha a um txt de dicionário
+deve haver mais um botão 'meaning' que mostra o significado da palavra
+deve haver mais um botão 'translation' que mostra a tradução da palavra
+
+
+novas estatísticas:
+total de palavras nas exceções
+total de palavras únicas encontradas entre as exceções
+total de palavras encontradas entre as exceções
+total de palavras únicas já adicionadas ao dicionário
+total de palavras já adicionadas ao dicionário
+
+(palavras que já estejam no dicionário devem ser mostradas com um parênteses vermelho alertando 'já definida')
+(acima - botão para hide/show de palavras que já estão no dicionário)
+
+
+(quiz para relembrar palavras adicionadas ao dicionário)
+
+Mostrar/esconder palavras adicionadas como exceção (por padrão, esconder0
+
+integrar com api's como a do google translate e oxford dictionary
+
+
+
+

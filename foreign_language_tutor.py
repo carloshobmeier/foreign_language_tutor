@@ -119,6 +119,17 @@ HTML_TEMPLATE = '''
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+
+        th:nth-child(2), td:nth-child(2) {
+            width: 100px;
+            text-align: center;
+        }
+
+        th:nth-child(1), td:nth-child(1) {
+            width: 200px;
+            text-align: left;
+        }
+
         .occurrences {
             display: none;
             margin-top: 10px;
