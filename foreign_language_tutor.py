@@ -152,6 +152,10 @@ HTML_TEMPLATE = '''
             background-color: #e7f3ff;
             border-radius: 5px;
         }
+
+        span {
+            color: blue;
+        }
     </style>
     <script>
         function updateStats() {
@@ -163,47 +167,51 @@ HTML_TEMPLATE = '''
                 });
         }
 
-        function toggleOccurrences(word, button) {
-            const occurrencesDiv = document.getElementById('occurrences-' + word);
-            if (occurrencesDiv.style.display === 'none') {
-                fetch('/get_occurrences/' + word)
-                    .then(response => response.json())
-                    .then(data => {
-                        let html = '';
-                        data.forEach(occurrence => {
-                            html += `<div class="occurrence-item">
-                                <strong>File:</strong> ${occurrence.file}<br>
-                                <strong>Line:</strong> ${occurrence.line}
-                            </div>`;
-                        });
-                        occurrencesDiv.innerHTML = html;
-                        occurrencesDiv.style.display = 'block';
-                        button.textContent = 'Hide Phrases';
-                    });
-            } else {
-                occurrencesDiv.style.display = 'none';
-                button.textContent = 'Show Phrases';
-            }
-        }
-        
-        function removeWord(word) {
-            fetch('/remove_word/' + word, { method: 'POST' })
-                .then(() => {
-                    const row = document.getElementById('row-' + word);
-                    const occurrencesRow = row.nextElementSibling;
-                    row.remove();
-                    occurrencesRow.remove();
-                    updateStats();
+function toggleOccurrences(word, button) {
+    const decodedWord = word.replace(/&#39;/g, "'"); // Substitui &#39; de volta para '
+    const occurrencesDiv = document.getElementById('occurrences-' + word);
+    if (occurrencesDiv.style.display === 'none') {
+        fetch('/get_occurrences/' + encodeURIComponent(decodedWord))
+            .then(response => response.json())
+            .then(data => {
+                let html = '';
+                data.forEach(occurrence => {
+                    html += `<div class="occurrence-item">
+                        <strong>File:</strong> <span>${occurrence.file} </span><br>
+                        <strong>Line:</strong> ${occurrence.line}
+                    </div>`;
                 });
-        }
+                occurrencesDiv.innerHTML = html;
+                occurrencesDiv.style.display = 'block';
+                button.textContent = 'Hide Phrases';
+            });
+    } else {
+        occurrencesDiv.style.display = 'none';
+        button.textContent = 'Show Phrases';
+    }
+}
+
+
+function removeWord(word) {
+    const encodedWord = word.replace(/'/g, "&#39;");
+    fetch('/remove_word/' + encodeURIComponent(word), { method: 'POST' })
+        .then(() => {
+            const row = document.getElementById('row-' + encodedWord);
+            const occurrencesRow = row.nextElementSibling;
+            row.remove();
+            occurrencesRow.remove();
+            updateStats();
+        });
+}
+
     </script>
 </head>
 <body>
     <h1>English Learning from Subtitles</h1>
     <div class="stats">
         <h3>Statistics:</h3>
-        <p>Total unique words: <span id="total-words">{{ stats.total_words }}</span></p>
-        <p>Total word occurrences: <span id="total-occurrences">{{ stats.total_occurrences }}</span></p>
+            <p>Total unique words: <span id="total-words">{{ stats.total_words | format }}</span></p>
+            <p>Total word occurrences: <span id="total-occurrences">{{ stats.total_occurrences | format }}</span></p>
     </div>
     <table>
         <tr>
@@ -212,20 +220,20 @@ HTML_TEMPLATE = '''
             <th>Actions</th>
         </tr>
         {% for word, count in words %}
-        <tr id="row-{{ word }}">
-            <td>{{ word }}</td>
-            <td>{{ count }}</td>
-            <td>
-                <button class="show-phrases" onclick="toggleOccurrences('{{ word }}', this)">Show Phrases</button>
-                <button class="remove" onclick="removeWord('{{ word }}')">Remove</button>
-            </td>
-        </tr>
-        <tr>
-            <td colspan="3">
-                <div id="occurrences-{{ word }}" class="occurrences" style="display: none;">
-                </div>
-            </td>
-        </tr>
+        <tr id="row-{{ word | replace(\"'\", \"&#39;\") }}">
+    <td>{{ word }}</td>
+    <td>{{ count }}</td>
+    <td>
+        <button class="show-phrases" onclick="toggleOccurrences('{{ word | replace(\"'\", \"&#39;\") }}', this)">Show Phrases</button>
+        <button class="remove" onclick="removeWord('{{ word | replace(\"'\", \"&#39;\") }}')">Remove</button>
+    </td>
+</tr>
+<tr>
+    <td colspan="3">
+        <div id="occurrences-{{ word | replace(\"'\", \"&#39;\") }}" class="occurrences" style="display: none;">
+        </div>
+    </td>
+</tr>
         {% endfor %}
     </table>
 </body>
@@ -233,16 +241,32 @@ HTML_TEMPLATE = '''
 '''
 
 @app.route('/')
+@app.route('/')
 def index():
     if subtitle_processor is None:
         return "Erro: Nenhum diretório processado"
     words = subtitle_processor.get_sorted_words()
     stats = subtitle_processor.get_stats()
-    return render_template_string(HTML_TEMPLATE, words=words, stats=stats)
+    
+    # Formatar números com ponto como separador de milhar
+    formatted_stats = {
+        'total_words': "{:,}".format(stats['total_words']).replace(",", "."),
+        'total_occurrences': "{:,}".format(stats['total_occurrences']).replace(",", ".")
+    }
+    
+    return render_template_string(HTML_TEMPLATE, words=words, stats=formatted_stats)
+
+
 
 @app.route('/get_stats')
 def get_stats():
-    return jsonify(subtitle_processor.get_stats())
+    stats = subtitle_processor.get_stats()
+    formatted_stats = {
+        'total_words': "{:,}".format(stats['total_words']).replace(",", "."),
+        'total_occurrences': "{:,}".format(stats['total_occurrences']).replace(",", ".")
+    }
+    return jsonify(formatted_stats)
+
 
 @app.route('/get_occurrences/<word>')
 def get_occurrences(word):
