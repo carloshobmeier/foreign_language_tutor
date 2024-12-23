@@ -32,8 +32,6 @@ Mostrar/esconder palavras adicionadas como exceção (por padrão, esconder0
 
 integrar com api's como a do google translate e oxford dictionary
 
-deixar a linha em que o mouse está sobre em destaque para ficar mais fácil de mexer por muito tempo
-
 
 
 
