@@ -15,6 +15,11 @@ class SubtitleProcessor:
         self.word_occurrences = defaultdict(list)
         self.word_counts = defaultdict(int)
         self.exceptions = self.load_exceptions()
+        self.exception_stats = {
+            'total_exceptions': len(self.exceptions),
+            'total_exception_occurrences': 0,
+            'exception_word_counts': defaultdict(int)
+        }
         if directory_path:
             self.process_directory(directory_path)
     
@@ -50,12 +55,16 @@ class SubtitleProcessor:
                 words = re.findall(r"\b[a-zA-Z]+(?:'[a-zA-Z]+)?(?=\s|$)", line.lower())
                 
                 for word in words:
-                    if len(word) > 1 and word not in self.exceptions:
-                        self.word_counts[word] += 1
-                        self.word_occurrences[word].append({
-                            'line': line.strip(),
-                            'file': str(file_path.name)
-                        })
+                    if len(word) > 1:
+                        if word in self.exceptions:
+                            self.exception_stats['exception_word_counts'][word] += 1
+                            self.exception_stats['total_exception_occurrences'] += 1
+                        else:
+                            self.word_counts[word] += 1
+                            self.word_occurrences[word].append({
+                                'line': line.strip(),
+                                'file': str(file_path.name)
+                            })
                         
             logger.info(f"Processado arquivo {file_path.name} - Encontradas {len(words)} palavras")
                         
@@ -84,7 +93,10 @@ class SubtitleProcessor:
     def get_stats(self):
         return {
             'total_words': len(self.word_counts),
-            'total_occurrences': sum(self.word_counts.values())
+            'total_occurrences': sum(self.word_counts.values()),
+            'total_exceptions': len(self.exceptions),
+            'total_exception_occurrences': self.exception_stats['total_exception_occurrences'],
+            'unique_exception_words': len(self.exception_stats['exception_word_counts'])
         }
 
 app = Flask(__name__)
@@ -99,7 +111,10 @@ def index():
     
     formatted_stats = {
         'total_words': "{:,}".format(stats['total_words']).replace(",", "."),
-        'total_occurrences': "{:,}".format(stats['total_occurrences']).replace(",", ".")
+        'total_occurrences': "{:,}".format(stats['total_occurrences']).replace(",", "."),
+        'total_exceptions': "{:,}".format(stats['total_exceptions']).replace(",", "."),
+        'total_exception_occurrences': "{:,}".format(stats['total_exception_occurrences']).replace(",", "."),
+        'unique_exception_words': "{:,}".format(stats['unique_exception_words']).replace(",", ".")
     }
     
     return render_template('index.html', words=words, stats=formatted_stats)
@@ -109,7 +124,10 @@ def get_stats():
     stats = subtitle_processor.get_stats()
     formatted_stats = {
         'total_words': "{:,}".format(stats['total_words']).replace(",", "."),
-        'total_occurrences': "{:,}".format(stats['total_occurrences']).replace(",", ".")
+        'total_occurrences': "{:,}".format(stats['total_occurrences']).replace(",", "."),
+        'total_exceptions': "{:,}".format(stats['total_exceptions']).replace(",", "."),
+        'total_exception_occurrences': "{:,}".format(stats['total_exception_occurrences']).replace(",", "."),
+        'unique_exception_words': "{:,}".format(stats['unique_exception_words']).replace(",", ".")
     }
     return jsonify(formatted_stats)
 
@@ -126,6 +144,10 @@ def remove_word(word):
     
     with open(exceptions_file, 'a', encoding='utf-8') as f:
         f.write(decoded_word.lower() + '\n')
+    
+    # Atualiza as exceções no subtitle_processor
+    subtitle_processor.exceptions.add(decoded_word.lower())
+    subtitle_processor.exception_stats['total_exceptions'] = len(subtitle_processor.exceptions)
     
     if decoded_word in subtitle_processor.word_counts:
         del subtitle_processor.word_counts[decoded_word]

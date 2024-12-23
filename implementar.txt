@@ -13,11 +13,11 @@ botão para marcar palavras (assim você consegue ver onde parou, por exemplo)
 
 
 novas estatísticas:
-total de palavras nas exceções
-total de palavras únicas encontradas entre as exceções
-total de palavras encontradas entre as exceções
+no current srts:	(ver se atualiza dinamicamente)
+	total de palavras (= total de exception words + total de palavras na tabela)
+	total de palavras únicas (= total de exceções únicas + total de palavras únicas na tabela)
 total de palavras únicas já adicionadas ao dicionário
-total de palavras já adicionadas ao dicionário
+total geral de palavras já adicionadas ao dicionário
 gráfico dia/semana/mês de palavras novas aprendidas
 gráfico metas de palavras adicionadas ao dicionário/exceções (diárias, semanais, mensais)
 
@@ -28,7 +28,7 @@ gráfico metas de palavras adicionadas ao dicionário/exceções (diárias, sema
 
 (quiz para relembrar palavras adicionadas ao dicionário)
 
-Mostrar/esconder palavras adicionadas como exceção (por padrão, esconder0
+Mostrar/esconder palavras adicionadas como exceção (por padrão, esconder)
 
 integrar com api's como a do google translate e oxford dictionary
 

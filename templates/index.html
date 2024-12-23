@@ -98,11 +98,36 @@
             padding: 10px;
             background-color: #e7f3ff;
             border-radius: 5px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .stats h2 {
+            margin-top: 0px;
+            margin-bottom: 0px;
+            padding-top: 0px;
+            padding-bottom: 0px;
+        }
+
+        .stats-section {
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stats-section h4 {
+            margin-top: 0;
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 5px;
         }
 
         span {
             color: blue;
         }
+
     </style>
 
     <script>
@@ -112,6 +137,9 @@
                 .then(data => {
                     document.getElementById('total-words').textContent = data.total_words;
                     document.getElementById('total-occurrences').textContent = data.total_occurrences;
+                    document.getElementById('total-exceptions').textContent = data.total_exceptions;
+                    document.getElementById('total-exception-occurrences').textContent = data.total_exception_occurrences;
+                    document.getElementById('unique-exception-words').textContent = data.unique_exception_words;
                 });
         }
 
@@ -154,9 +182,21 @@
 <body>
     <h1>English Learning from Subtitles</h1>
     <div class="stats">
-        <h3>Statistics:</h3>
-            <p>Total unique words: <span id="total-words">{{ stats.total_words }}</span></p>
-            <p>Total word occurrences: <span id="total-occurrences">{{ stats.total_occurrences }}</span></p>
+        <h2>Statistics</h2><h2></h2><h2></h2>
+        <div class="stats-section">
+            <h4>Table of srt's new words:</h4>
+            <p>Total of words in the table: <span id="total-occurrences">{{ stats.total_occurrences }}</span></p>
+            <p>Total of unique words in the table: <span id="total-words">{{ stats.total_words }}</span></p>
+        </div>
+        <div class="stats-section">
+            <h4>Exception list:</h4>
+            <p>Total of words in the exception list: <span id="total-exceptions">{{ stats.total_exceptions }}</span></p>
+        </div>
+        <div class="stats-section">
+            <h4>Current srt's known words:     (non-dynamic)</h4>
+            <p>Total occurrences of exception words on srt's: <span id="total-exception-occurrences">{{ stats.total_exception_occurrences }}</span></p>
+            <p>Total unique exception words found on srt's: <span id="unique-exception-words">{{ stats.unique_exception_words }}</span></p>
+        </div>
     </div>
     <table>
         <tr>
