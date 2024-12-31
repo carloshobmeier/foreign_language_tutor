@@ -9,7 +9,7 @@ percentual de palavras revisadas
 bibliotecas text-to-speech para ver a pronúncia das palavras
 gamificação (pontos por palavras adicionadas ao dicionário)
 botão para marcar palavras (assim você consegue ver onde parou, por exemplo)
-
+além de srt deve pegar extensões .sub
 
 
 novas estatísticas:
